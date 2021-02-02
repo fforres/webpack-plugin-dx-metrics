@@ -1,4 +1,4 @@
-name: Build/Test/Publish
+name: Build
 
 on:
   push:
@@ -6,9 +6,9 @@ on:
 
 jobs:
   test:
+    runs-on: ubuntu-latest
     if:
       github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
@@ -26,30 +26,3 @@ jobs:
 
       - name: Typecheck
         run: yarn typecheck
-
-  publish:
-    needs: [test]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/setup-node@v2
-        with:
-          node-version: "14.x"
-          registry-url: "https://npm.pkg.github.com"
-
-      - name: Cache node_modules Folder
-        uses: actions/cache@v2
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
-
-      - name: Install Dependencies
-        run: yarn install --frozen-lockfile
-
-      # - name: Publish To Github Packages
-      #   run: yarn publish --access restricted
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     NODE_ENV: production
