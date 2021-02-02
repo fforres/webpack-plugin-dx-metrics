@@ -64,10 +64,10 @@ class Timer {
 
 const timerKeys = {
   recompile: 'recompile',
-  recompileSession: 'recompileSession',
+  recompileSession: 'recompile_session',
   compile: 'compile',
-  compileSession: 'compileSession',
-} as const;
+  compileSession: 'compile_session',
+};
 
 const timersCache = {
   [timerKeys.recompile]: new Timer(timerKeys.recompile),
@@ -76,29 +76,27 @@ const timersCache = {
   [timerKeys.compileSession]: new Timer(timerKeys.compileSession),
 } as {[key: string]: Timer};
 
-type Keys = keyof typeof timerKeys;
-
 const timer = {
-  start: (timerName: Keys) => {
+  start: (timerName: string) => {
     debug('starting "%s" timer', timerName);
     timersCache[timerName].start();
   },
-  stop: (timerName: Keys) => {
+  stop: (timerName: string) => {
     debug('stopping "%s" timer', timerName);
     timersCache[timerName].stop();
   },
-  clear: (timerName: Keys) => {
+  clear: (timerName: string) => {
     debug('clearing "%s" timer', timerName);
     timersCache[timerName].clear();
   },
-  getTime: (timerName: Keys) => {
+  getTime: (timerName: string) => {
     const milliseconds = timersCache[timerName].milliseconds();
     debug('TIME (in miliseconds) for "%s" timer => %d', timerName, milliseconds);
     return milliseconds;
   },
 };
 
-export default class DXWebpackPlugin {
+class DXWebpackPlugin {
   private options: {} = {};
 
   private isRecompilation: boolean = false
@@ -153,3 +151,5 @@ export default class DXWebpackPlugin {
     });
   }
 }
+
+export = DXWebpackPlugin

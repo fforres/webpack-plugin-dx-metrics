@@ -2,7 +2,6 @@
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-Object.defineProperty(exports, "__esModule", { value: true });
 const process_1 = require("process");
 const debug_1 = __importDefault(require("debug"));
 const uuid_1 = require("uuid");
@@ -54,9 +53,9 @@ class Timer {
 }
 const timerKeys = {
     recompile: 'recompile',
-    recompileSession: 'recompileSession',
+    recompileSession: 'recompile_session',
     compile: 'compile',
-    compileSession: 'compileSession',
+    compileSession: 'compile_session',
 };
 const timersCache = {
     [timerKeys.recompile]: new Timer(timerKeys.recompile),
@@ -135,4 +134,4 @@ class DXWebpackPlugin {
         });
     }
 }
-exports.default = DXWebpackPlugin;
+module.exports = DXWebpackPlugin;

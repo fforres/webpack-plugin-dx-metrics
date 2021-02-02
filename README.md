@@ -1,59 +1,95 @@
-<img src="https://github.com/fforres/webpack-plugin-dx-metrics/workflows/test/badge.svg"/>
 
-Things I'd like to track 
+# DX-analytics-webpack-plugin
 
-## Timers
-- compilation time: from "beforeCompile" to "compilation"
-- compilationSession time: from "environment" to "done"
-- recompilation time: from "beforeCompile" to "compilation"
-- recompilationSession time: from "watchRun" to "done"
+> **DISCLAIMER**: THIS IS STILL A WIP. USE IT AT YOUR OWN RISK
 
-> Should we gather the following as well.
-- Device info
-- Current Github account (maybe too creepy?)
-- Branch
+![Github test badge](https://github.com/fforres/webpack-plugin-dx-metrics/workflows/test/badge.svg)
+
+This webpack plugin serves as a way to quickly gather meaningful information on a webpack project's usage and sending it to a statsd server written in typescript.
+(For demo purposes, we are integrating with Datadog's [hot-shot](https://github.com/brightcove/hot-shots)).
+
+Attaches itself to webpack hooks, and using a series of timers, calculates and reports on things like compilation or recompilation time.
+
+## Install
+
+If your are using yarn
+
+```bash
+yarn add --dev @fforres/webpack-plugin-dx
+```
+
+or if you use npm
+
+```bash
+npm install --save-dev @fforres/webpack-plugin-dx
+```
+
+## Usage
+
+you can see some usage of it in [./webpack.config.dev.js](./webpack.config.dev.js)
+But in essence you require the `@fforres/webpack-plugin-dx` and use in in the plugins in your webpack config.
+
+```TYPESCRIPT
+const UXWebpackPlugin = require('@fforres/webpack-plugin-dx');
+module.exports = {
+  {...}
+  plugins: [
+    new UXWebpackPlugin(),
+  ],
+};
+```
+
+## Development
+
+- `git clone`
+- `yarn`
+- and `yarn dev` to run a super-simple webpack-dev-server with the plugin `debug` enabled
+- or `yarn debug` to run webpack with node `--inspect-brk` flag, and be able to debug using the [NIM - Node Inspector Manager](https://chrome.google.com/webstore/detail/nodejs-v8-inspector-manag/gnhhdgbaldcilmgcpfddgdbkhjohddkj?hl=en) chrome extension
+
+## Deploy
+
+To deploy, create a PR and bump the the version in `package.json`. Once the PR is merged it will deploy a new version of the package.
+
+## Current things being tracked
+
+| Metric  | Tracking key | Description  |
+|---|---|---|
+| compilation  | `compile` | Tracks only the time an application takes to compile the code. Regarding wepback hooks tracks from `"beforeCompile"` to `"compilation"` |
+| compilationSession  | `compile_session`  | Tracks the time from when a webpack process starts, until it finishes. Regarding wepback hooks tracks from `"environment"` to `"done"`  |
+| recompilation  |  `recompile` |  Tracks "only" the time an application takes to re-compile the code. (After the initial compilation). Regarding wepback hooks tracks from `"beforeCompile"` to `"compilation"` |
+| recompilationSession  |  `recompile_session` |  Tracks the time when a webpack recompilation starts, until it finishes. Regarding wepback hooks, it tracks from `"watchRun"` to `"done"` |
+
+## Things we might want to track but no decision yet
+
+- **System info** [🔗](https://github.com/sebhildebrandt/systeminformation)
+  > Creepy factor. 😬 However maybe useful on companies/internally. Being able to debug, or on bigger companies it would be useful to figure out what type of devices are slower/faster.
+- **git commit sha.**
+  > Creepy factor. 🤔
+- **branch**
+  > Creepy factor. 🤔
 
 ## Some info I've gathered
 
-### Order of hooks on full run:
+Some info gathering on webpack compilation steps
 
-1. environment
-1. afterEnvironment
-1. entryOption
-1. afterPlugins
-1. afterResolvers
-1. entryOption
-1. watchRun
-1. normalModuleFactory
-1. contextModuleFactory
-1. beforeCompile
-1. compile
-1. thisCompilation
-1. compilation
-1. make
-1. afterCompile
-1. shouldEmit
-1. emit
-1. afterEmit
-1. done
-
-
-### Order of hooks on recompile
-
-
-`invalid [ '/Users/fforres/BREX/ux-webpack-plugin/app/index.js', 1612211541086 ]` *(Also...this happened, not sure why)*
-
-1. watchRun
-1. normalModuleFactory
-1. contextModuleFactory
-1. beforeCompile
-1. compile
-1. thisCompilation
-1. compilation
-1. make
-1. afterCompile
-1. shouldEmit
-1. emit
-1. afterEmit
-1. done
-
+| Webpack Hook name | Runs in compilation | Runs in re-compilaton  |
+|---|:---:|:---:|
+| `environment` | ✅ | ❌ |
+| `afterEnvironment` | ✅ | ❌ |
+| `entryOption` | ✅ | ❌ |
+| `afterPlugins` | ✅ | ❌ |
+| `afterResolvers` | ✅ | ❌ |
+| `entryOption` | ✅ | ❌ |
+| `watchRun` | ✅ | ✅ |
+| `normalModuleFactory` | ✅ | ✅ |
+| `contextModuleFactory` | ✅ | ✅ |
+| `beforeCompile` | ✅ | ✅ |
+| `compile` | ✅ | ✅ |
+| `thisCompilation` | ✅ | ✅ |
+| `compilation` | ✅ | ✅ |
+| `make` | ✅ | ✅ |
+| `afterCompile` | ✅ | ✅ |
+| `shouldEmit` | ✅ | ✅ |
+| `emit` | ✅ | ✅ |
+| `afterEmit` | ✅ | ✅ |
+| `done` | ✅ | ✅ |

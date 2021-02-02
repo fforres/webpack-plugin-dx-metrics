@@ -1,5 +1,5 @@
 const path = require('path');
-const { default: UXWebpackPlugin } = require('./build/index.js');
+const UXWebpackPlugin = require('./build/index.js');
 
 const fileName = 'bundle.js';
 const PATHS = {
