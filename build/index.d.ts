@@ -1,10 +1,11 @@
-import { Compiler } from 'webpack';
 declare class DXWebpackPlugin {
+    private defaultOptions;
     private options;
     private isRecompilation;
-    constructor(options?: {});
+    private constructor();
+    private preflightCheck;
     private finishInitialCompilation;
-    apply(compiler: Compiler): void;
+    private apply;
 }
 export = DXWebpackPlugin;
 //# sourceMappingURL=index.d.ts.map

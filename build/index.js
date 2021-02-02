@@ -2,66 +2,21 @@
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-const process_1 = require("process");
 const debug_1 = __importDefault(require("debug"));
 const uuid_1 = require("uuid");
+const deepmerge_1 = __importDefault(require("deepmerge"));
+const timer_1 = require("./timer");
+const types_1 = require("./types");
+const constants_1 = require("./constants");
 const sessionId = uuid_1.v4();
-const debugString = 'ux:webpack_plugin';
-const debug = debug_1.default(debugString);
-const pluginName = 'DXWebpackPlugin';
+const debug = debug_1.default(constants_1.DEBUG_STRING);
 // const dogapi = require('dogapi');
 // dogapi.initialize({});
-const diffingBigIntsToMilliseconds = (bigInt1, bigInt2) => {
-    const substracted = (bigInt1 - bigInt2);
-    return Math.floor(Number(substracted / BigInt(1000000)));
-};
-class Timer {
-    constructor(label) {
-        this.props = {
-            label: '',
-        };
-        this.startTime = BigInt(0);
-        this.stopTime = BigInt(0);
-        this.isRunning = false;
-        this.started = false;
-        this.props = { label };
-    }
-    start() {
-        this.startTime = process_1.hrtime.bigint();
-        this.started = true;
-        this.isRunning = true;
-    }
-    stop() {
-        this.stopTime = process_1.hrtime.bigint();
-        this.isRunning = false;
-    }
-    clear() {
-        this.startTime = BigInt(0);
-        this.stopTime = BigInt(0);
-        this.isRunning = false;
-        this.started = false;
-    }
-    milliseconds() {
-        if (!this.started) {
-            throw new Error(`Timer "${this.props.label}" was never started`);
-        }
-        if (this.isRunning) {
-            return diffingBigIntsToMilliseconds(process_1.hrtime.bigint(), this.startTime);
-        }
-        return diffingBigIntsToMilliseconds(this.stopTime, this.startTime);
-    }
-}
-const timerKeys = {
-    recompile: 'recompile',
-    recompileSession: 'recompile_session',
-    compile: 'compile',
-    compileSession: 'compile_session',
-};
 const timersCache = {
-    [timerKeys.recompile]: new Timer(timerKeys.recompile),
-    [timerKeys.recompileSession]: new Timer(timerKeys.recompileSession),
-    [timerKeys.compile]: new Timer(timerKeys.compile),
-    [timerKeys.compileSession]: new Timer(timerKeys.compileSession),
+    [types_1.TrackingMetrics.recompile]: new timer_1.Timer(types_1.TrackingMetrics.recompile),
+    [types_1.TrackingMetrics.recompile_session]: new timer_1.Timer(types_1.TrackingMetrics.recompile_session),
+    [types_1.TrackingMetrics.compile]: new timer_1.Timer(types_1.TrackingMetrics.compile),
+    [types_1.TrackingMetrics.compile_session]: new timer_1.Timer(types_1.TrackingMetrics.compile_session),
 };
 const timer = {
     start: (timerName) => {
@@ -84,51 +39,54 @@ const timer = {
 };
 class DXWebpackPlugin {
     constructor(options = {}) {
+        this.defaultOptions = {};
         this.options = {};
         this.isRecompilation = false;
-        this.options = options;
+        this.preflightCheck = () => { };
+        this.options = deepmerge_1.default(options, this.defaultOptions);
+        this.preflightCheck();
     }
     finishInitialCompilation() {
         this.isRecompilation = true;
     }
     apply(compiler) {
-        debug('Starting DXWebpackPlugin session. ID: "%s"', sessionId);
-        compiler.hooks.environment.tap(pluginName, () => {
-            timer.start(timerKeys.compileSession);
+        debug('Starting %s session. ID: "%s"', constants_1.PLUGIN_NAME, sessionId);
+        compiler.hooks.environment.tap(constants_1.PLUGIN_NAME, () => {
+            timer.start(types_1.TrackingMetrics.compile_session);
         });
-        compiler.hooks.watchRun.tap(pluginName, () => {
+        compiler.hooks.watchRun.tap(constants_1.PLUGIN_NAME, () => {
             if (this.isRecompilation) {
-                timer.start(timerKeys.recompileSession);
+                timer.start(types_1.TrackingMetrics.recompile_session);
             }
         });
-        compiler.hooks.beforeCompile.tap(pluginName, () => {
+        compiler.hooks.beforeCompile.tap(constants_1.PLUGIN_NAME, () => {
             if (this.isRecompilation) {
-                timer.start(timerKeys.recompile);
+                timer.start(types_1.TrackingMetrics.recompile);
             }
             else {
-                timer.start(timerKeys.compile);
+                timer.start(types_1.TrackingMetrics.compile);
             }
         });
-        compiler.hooks.afterCompile.tap(pluginName, () => {
+        compiler.hooks.afterCompile.tap(constants_1.PLUGIN_NAME, () => {
             if (this.isRecompilation) {
-                timer.getTime(timerKeys.recompile);
-                timer.clear(timerKeys.recompile);
+                timer.getTime(types_1.TrackingMetrics.recompile);
+                timer.clear(types_1.TrackingMetrics.recompile);
             }
             else {
-                timer.getTime(timerKeys.compile);
-                timer.clear(timerKeys.compile);
+                timer.getTime(types_1.TrackingMetrics.compile);
+                timer.clear(types_1.TrackingMetrics.compile);
             }
         });
-        compiler.hooks.done.tap(pluginName, () => {
+        compiler.hooks.done.tap(constants_1.PLUGIN_NAME, () => {
             if (this.isRecompilation) {
-                timer.getTime(timerKeys.recompileSession);
-                timer.clear(timerKeys.recompileSession);
+                timer.getTime(types_1.TrackingMetrics.recompile_session);
+                timer.clear(types_1.TrackingMetrics.recompile_session);
             }
             else {
-                timer.getTime(timerKeys.compileSession);
-                timer.clear(timerKeys.compileSession);
-                // marks the end of initial compilation, everyting after this can be
-                // considered a re-compilation
+                timer.getTime(types_1.TrackingMetrics.compile_session);
+                timer.clear(types_1.TrackingMetrics.compile_session);
+                // This call marks the end of initial compilation, everyting after this
+                // can be considered a re-compilation
                 this.finishInitialCompilation();
             }
         });
