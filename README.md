@@ -1,3 +1,5 @@
+<img src="https://github.com/fforres/webpack-plugin-dx-metrics/workflows/test/badge.svg"/>
+
 Things I'd like to track 
 
 ## Timers
