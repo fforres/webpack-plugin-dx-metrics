@@ -1,9 +1,9 @@
 import { Compiler } from 'webpack';
 import { hrtime } from 'process';
 import debugFactory from 'debug';
-import uuid from 'uuid';
+import { v4 } from 'uuid';
 
-const sessionId = uuid.v4();
+const sessionId = v4();
 const debugString = 'ux:webpack_plugin';
 const debug = debugFactory(debugString);
 const pluginName = 'UXWebpackPlugin';

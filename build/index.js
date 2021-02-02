@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const process_1 = require("process");
 const debug_1 = __importDefault(require("debug"));
-const uuid_1 = __importDefault(require("uuid"));
-const sessionId = uuid_1.default.v4();
+const uuid_1 = require("uuid");
+const sessionId = uuid_1.v4();
 const debugString = 'ux:webpack_plugin';
 const debug = debug_1.default(debugString);
 const pluginName = 'UXWebpackPlugin';
