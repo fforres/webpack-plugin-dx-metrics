@@ -1,12 +1,14 @@
 {
-  "name": "ux-webpack-plugin",
+  "name": "webpack-plugin-dx",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "build/index.js",
   "author": "fforres",
   "license": "MIT",
   "scripts": {
     "dev": "yarn tsc & DEBUG=ux:webpack_plugin webpack-dev-server --config ./webpack.config.dev.js",
-    "debug": "yarn tsc && DEBUG=ux:webpack_plugin node --inspect-brk ./node_modules/webpack-dev-server/bin/webpack-dev-server.js --config ./webpack.config.dev.js"
+    "debug": "yarn tsc && DEBUG=ux:webpack_plugin node --inspect-brk ./node_modules/webpack-dev-server/bin/webpack-dev-server.js --config ./webpack.config.dev.js",
+    "lint": "eslint --ext=.ts,.tsx src",
+    "typecheck": "yarn tsc --noEmit"
   },
   "devDependencies": {
     "@babel/cli": "^7.12.10",

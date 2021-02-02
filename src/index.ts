@@ -6,7 +6,7 @@ import { v4 } from 'uuid';
 const sessionId = v4();
 const debugString = 'ux:webpack_plugin';
 const debug = debugFactory(debugString);
-const pluginName = 'UXWebpackPlugin';
+const pluginName = 'DXWebpackPlugin';
 
 // const dogapi = require('dogapi');
 // dogapi.initialize({});
@@ -98,21 +98,21 @@ const timer = {
   },
 };
 
-export default class UXWebpackPlugin {
-  options: {} = {};
+export default class DXWebpackPlugin {
+  private options: {} = {};
 
-  isRecompilation: boolean = false
+  private isRecompilation: boolean = false
 
   constructor(options = {}) {
     this.options = options;
   }
 
-  finishInitialCompilation() {
+  private finishInitialCompilation() {
     this.isRecompilation = true;
   }
 
   apply(compiler: Compiler) {
-    debug('Starting UXWebpackPlugin session. ID: "%s"', sessionId);
+    debug('Starting DXWebpackPlugin session. ID: "%s"', sessionId);
 
     compiler.hooks.environment.tap(pluginName, () => {
       timer.start(timerKeys.compileSession);

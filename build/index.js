@@ -9,7 +9,7 @@ const uuid_1 = require("uuid");
 const sessionId = uuid_1.v4();
 const debugString = 'ux:webpack_plugin';
 const debug = debug_1.default(debugString);
-const pluginName = 'UXWebpackPlugin';
+const pluginName = 'DXWebpackPlugin';
 // const dogapi = require('dogapi');
 // dogapi.initialize({});
 const diffingBigIntsToMilliseconds = (bigInt1, bigInt2) => {
@@ -83,7 +83,7 @@ const timer = {
         return milliseconds;
     },
 };
-class UXWebpackPlugin {
+class DXWebpackPlugin {
     constructor(options = {}) {
         this.options = {};
         this.isRecompilation = false;
@@ -93,7 +93,7 @@ class UXWebpackPlugin {
         this.isRecompilation = true;
     }
     apply(compiler) {
-        debug('Starting UXWebpackPlugin session. ID: "%s"', sessionId);
+        debug('Starting DXWebpackPlugin session. ID: "%s"', sessionId);
         compiler.hooks.environment.tap(pluginName, () => {
             timer.start(timerKeys.compileSession);
         });
@@ -135,4 +135,4 @@ class UXWebpackPlugin {
         });
     }
 }
-exports.default = UXWebpackPlugin;
+exports.default = DXWebpackPlugin;
