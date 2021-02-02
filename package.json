@@ -4,6 +4,7 @@
   "main": "build/index.js",
   "author": "fforres",
   "license": "MIT",
+  "private": false,
   "scripts": {
     "build": "yarn tsc",
     "dev": "yarn build & DEBUG=ux:webpack_plugin webpack-dev-server --config ./webpack.config.dev.js",
