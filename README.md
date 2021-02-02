@@ -45,6 +45,7 @@ module.exports = {
 - `yarn`
 - and `yarn dev` to run a super-simple webpack-dev-server with the plugin `debug` enabled
 - or `yarn debug` to run webpack with node `--inspect-brk` flag, and be able to debug using the [NIM - Node Inspector Manager](https://chrome.google.com/webstore/detail/nodejs-v8-inspector-manag/gnhhdgbaldcilmgcpfddgdbkhjohddkj?hl=en) chrome extension
+- Once you have this running, go ahead and change (and save) a file inside [./app/](./app)
 
 ## Deploy
 
@@ -52,12 +53,12 @@ To deploy, create a PR and bump the the version in `package.json`. Once the PR i
 
 ## Current things being tracked
 
-| Metric  | Tracking key | Description  |
-|---|---|---|
-| compilation  | `compile` | Tracks only the time an application takes to compile the code. Regarding wepback hooks tracks from `"beforeCompile"` to `"compilation"` |
-| compilationSession  | `compile_session`  | Tracks the time from when a webpack process starts, until it finishes. Regarding wepback hooks tracks from `"environment"` to `"done"`  |
-| recompilation  |  `recompile` |  Tracks "only" the time an application takes to re-compile the code. (After the initial compilation). Regarding wepback hooks tracks from `"beforeCompile"` to `"compilation"` |
-| recompilationSession  |  `recompile_session` |  Tracks the time when a webpack recompilation starts, until it finishes. Regarding wepback hooks, it tracks from `"watchRun"` to `"done"` |
+| Metric               | Tracking key        | Description                                                                                                                                                                   |  How are we tracking  |
+|----------------------|---------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------|
+| compilation          | `compile`           | Tracks only the time an application takes to compile the code. Regarding wepback hooks tracks from `"beforeCompile"` to `"compilation"`                                       | histogram             |
+| compilationSession   | `compile_session`   | Tracks the time from when a webpack process starts, until it finishes. Regarding wepback hooks tracks from `"environment"` to `"done"`                                        | histogram & increment |
+| recompilation        | `recompile`         | Tracks "only" the time an application takes to re-compile the code. (After the initial compilation). Regarding wepback hooks tracks from `"beforeCompile"` to `"compilation"` | histogram             |
+| recompilationSession | `recompile_session` | Tracks the time when a webpack recompilation starts, until it finishes. Regarding wepback hooks, it tracks from `"watchRun"` to `"done"`                                      | histogram & increment |
 
 ## Things we might want to track but no decision yet
 

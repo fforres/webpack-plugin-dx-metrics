@@ -2,12 +2,13 @@ import { Compiler } from 'webpack';
 import debugFactory from 'debug';
 import { v4 } from 'uuid';
 import deepmerge from 'deepmerge';
+import HotShotsStatsD, { StatsD } from 'hot-shots';
 import { Timer } from './timer';
 import {
-  Full,
   DXWebpackPluginProps,
   TrackingMetrics,
   TrackingMetricKeys,
+  trackingMetricKeys,
 } from './types';
 import {
   DEBUG_STRING,
@@ -17,15 +18,12 @@ import {
 const sessionId = v4();
 const debug = debugFactory(DEBUG_STRING);
 
-// const dogapi = require('dogapi');
-// dogapi.initialize({});
-
 const timersCache = {
   [TrackingMetrics.recompile]: new Timer(TrackingMetrics.recompile),
   [TrackingMetrics.recompile_session]: new Timer(TrackingMetrics.recompile_session),
   [TrackingMetrics.compile]: new Timer(TrackingMetrics.compile),
   [TrackingMetrics.compile_session]: new Timer(TrackingMetrics.compile_session),
-} as {[key: string]: Timer};
+};
 
 const timer = {
   start: (timerName: TrackingMetricKeys) => {
@@ -48,21 +46,61 @@ const timer = {
 };
 
 class DXWebpackPlugin {
-  private defaultOptions: Full<DXWebpackPluginProps> = {};
+  private options: DXWebpackPluginProps | null = null;
 
-  private options: DXWebpackPluginProps = {};
+  private statsDClient: StatsD;
+
+  private defaultOptions: Partial<DXWebpackPluginProps> = {
+    enabledKeysToTrack: trackingMetricKeys,
+  };
 
   private isRecompilation: boolean = false
 
-  private constructor(options = {}) {
+  private trackingEnabled: boolean = true
+
+  private enabledKeysSet: Set<TrackingMetricKeys> = new Set()
+
+  private constructor(options: Partial<DXWebpackPluginProps> = {}) {
     this.options = deepmerge<DXWebpackPluginProps>(options, this.defaultOptions);
+    this.statsDClient = new HotShotsStatsD(this.options.datadogConfig);
+    this.trackingEnabled = this.options.dryRun;
+    this.enabledKeysSet = new Set(this.options.enabledKeysToTrack);
     this.preflightCheck();
   }
 
-  private preflightCheck = () => {}
+  private preflightCheck = () => {
+    if (!this.options) {
+      throw new Error('Options not initialized');
+    }
+    if (!this.statsDClient) {
+      throw new Error('StatsD Client not initialized');
+    }
+  }
 
-  private finishInitialCompilation() {
+  private finishInitialCompilation = () => {
     this.isRecompilation = true;
+  }
+
+  private trackHistogram = (key: TrackingMetricKeys, value: number) => {
+    if (!this.trackingEnabled) {
+      debug('Tracking disabled, will not track %s', key);
+      return;
+    }
+    if (!this.enabledKeysSet.has(key)) {
+      debug('Tracking key is not allowed, will not track %s', key);
+      return;
+    }
+    debug('Tracking  %s', key);
+    this.statsDClient.histogram(key, value);
+  }
+
+  private trackIncrement = (key: TrackingMetricKeys, value: number = 1) => {
+    if (!this.trackingEnabled) {
+      debug('Tracking disabled, will not track %s', key);
+      return;
+    }
+    debug('Tracking  %s', key);
+    this.statsDClient.increment(key, value);
   }
 
   private apply(compiler: Compiler) {
@@ -70,11 +108,13 @@ class DXWebpackPlugin {
 
     compiler.hooks.environment.tap(PLUGIN_NAME, () => {
       timer.start(TrackingMetrics.compile_session);
+      this.trackIncrement(TrackingMetrics.compile_session);
     });
 
     compiler.hooks.watchRun.tap(PLUGIN_NAME, () => {
       if (this.isRecompilation) {
         timer.start(TrackingMetrics.recompile_session);
+        this.trackIncrement(TrackingMetrics.recompile_session);
       }
     });
 
@@ -98,13 +138,16 @@ class DXWebpackPlugin {
 
     compiler.hooks.done.tap(PLUGIN_NAME, () => {
       if (this.isRecompilation) {
-        timer.getTime(TrackingMetrics.recompile_session);
+        const time = timer.getTime(TrackingMetrics.recompile_session);
+        this.trackHistogram(TrackingMetrics.recompile_session, time);
         timer.clear(TrackingMetrics.recompile_session);
       } else {
-        timer.getTime(TrackingMetrics.compile_session);
+        const time = timer.getTime(TrackingMetrics.compile_session);
+        this.trackHistogram(TrackingMetrics.compile_session, time);
         timer.clear(TrackingMetrics.compile_session);
-        // This call marks the end of initial compilation, everyting after this
-        // can be considered a re-compilation
+        // Once we reach "done" for the first time, we can mark the end of
+        // initial compilation, everyting after this, can be considered a
+        // re-compilation, so we switch the flag
         this.finishInitialCompilation();
       }
     });

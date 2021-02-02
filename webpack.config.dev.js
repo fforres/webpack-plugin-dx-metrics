@@ -18,14 +18,6 @@ module.exports = {
     filename: fileName,
     publicPath: '/',
   },
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        loader: 'babel-loader',
-      },
-    ],
-  },
   watch: true,
   watchOptions: {
     ignored: '/node_modules/',

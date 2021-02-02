@@ -1,10 +1,15 @@
 declare class DXWebpackPlugin {
-    private defaultOptions;
     private options;
+    private statsDClient;
+    private defaultOptions;
     private isRecompilation;
+    private trackingEnabled;
+    private enabledKeysSet;
     private constructor();
     private preflightCheck;
     private finishInitialCompilation;
+    private trackHistogram;
+    private trackIncrement;
     private apply;
 }
 export = DXWebpackPlugin;
