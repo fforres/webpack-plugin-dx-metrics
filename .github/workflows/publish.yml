@@ -25,6 +25,9 @@ jobs:
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build project
+        run: yarn build
+
       - name: Publish To Github Packages
         run: yarn publish --access pblic
         env:

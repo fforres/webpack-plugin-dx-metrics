@@ -1,5 +1,5 @@
 {
-  "name": "webpack-plugin-dx",
+  "name": "@fforres/webpack-plugin-dx",
   "version": "0.0.1",
   "main": "build/index.js",
   "author": "fforres",
