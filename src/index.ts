@@ -2,7 +2,7 @@ import { Compiler } from 'webpack';
 import debugFactory from 'debug';
 import { v4 } from 'uuid';
 import deepmerge from 'deepmerge';
-import HotShotsStatsD, { StatsD } from 'hot-shots';
+import datadogMetrics from 'datadog-metrics';
 import { Timer } from './timer';
 import {
   DXWebpackPluginProps,
@@ -40,18 +40,23 @@ const timer = {
   },
   getTime: (timerName: TrackingMetricKeys) => {
     const milliseconds = timersCache[timerName].milliseconds();
-    debug('TIME (in miliseconds) for "%s" timer => %d', timerName, milliseconds);
+    debug('TIME (in miliseconds) for "%s" => "%d miliseconds"', timerName, milliseconds);
     return milliseconds;
   },
 };
 
 class DXWebpackPlugin {
-  private options: DXWebpackPluginProps | null = null;
+  private options: Required<DXWebpackPluginProps> | null = null;
 
-  private statsDClient: StatsD;
+  private statsDClient = datadogMetrics
 
   private defaultOptions: Partial<DXWebpackPluginProps> = {
     enabledKeysToTrack: trackingMetricKeys,
+    dryRun: false,
+    datadogConfig: {
+      prefix: 'ux.webpack.',
+      flushIntervalSeconds: 2,
+    },
   };
 
   private isRecompilation: boolean = false
@@ -60,10 +65,9 @@ class DXWebpackPlugin {
 
   private enabledKeysSet: Set<TrackingMetricKeys> = new Set()
 
-  private constructor(options: Partial<DXWebpackPluginProps> = {}) {
-    this.options = deepmerge<DXWebpackPluginProps>(options, this.defaultOptions);
-    this.statsDClient = new HotShotsStatsD(this.options.datadogConfig);
-    this.trackingEnabled = this.options.dryRun;
+  private constructor(options: DXWebpackPluginProps) {
+    this.options = deepmerge<Required<DXWebpackPluginProps>>(this.defaultOptions, options);
+    this.trackingEnabled = !this.options.dryRun;
     this.enabledKeysSet = new Set(this.options.enabledKeysToTrack);
     this.preflightCheck();
   }
@@ -75,32 +79,39 @@ class DXWebpackPlugin {
     if (!this.statsDClient) {
       throw new Error('StatsD Client not initialized');
     }
+    debug('Options: %O', this.options);
+    this.statsDClient.init(this.options.datadogConfig);
+    // eslint-disable-next-line no-console
+    console.info('Preflight check successful ✅. Ready to Start');
   }
 
   private finishInitialCompilation = () => {
     this.isRecompilation = true;
   }
 
-  private trackHistogram = (key: TrackingMetricKeys, value: number) => {
+  private shouldTrack = (key: TrackingMetricKeys, value: number) => {
     if (!this.trackingEnabled) {
       debug('Tracking disabled, will not track %s', key);
-      return;
+      return false;
     }
     if (!this.enabledKeysSet.has(key)) {
       debug('Tracking key is not allowed, will not track %s', key);
-      return;
+      return false;
     }
-    debug('Tracking  %s', key);
-    this.statsDClient.histogram(key, value);
+    debug('Tracking  %s with value %s', key, value);
+    return true;
+  }
+
+  private trackHistogram = (key: TrackingMetricKeys, value: number) => {
+    if (this.shouldTrack(key, value)) {
+      this.statsDClient.histogram(key, value);
+    }
   }
 
   private trackIncrement = (key: TrackingMetricKeys, value: number = 1) => {
-    if (!this.trackingEnabled) {
-      debug('Tracking disabled, will not track %s', key);
-      return;
+    if (this.shouldTrack(key, value)) {
+      this.statsDClient.increment(key, value);
     }
-    debug('Tracking  %s', key);
-    this.statsDClient.increment(key, value);
   }
 
   private apply(compiler: Compiler) {
@@ -128,10 +139,12 @@ class DXWebpackPlugin {
 
     compiler.hooks.afterCompile.tap(PLUGIN_NAME, () => {
       if (this.isRecompilation) {
-        timer.getTime(TrackingMetrics.recompile);
+        const time = timer.getTime(TrackingMetrics.recompile);
+        this.trackHistogram(TrackingMetrics.recompile, time);
         timer.clear(TrackingMetrics.recompile);
       } else {
-        timer.getTime(TrackingMetrics.compile);
+        const time = timer.getTime(TrackingMetrics.compile);
+        this.trackHistogram(TrackingMetrics.compile, time);
         timer.clear(TrackingMetrics.compile);
       }
     });
