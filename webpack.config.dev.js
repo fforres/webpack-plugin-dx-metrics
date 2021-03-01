@@ -26,7 +26,11 @@ module.exports = {
     extensions: ['.js', '.jsx'],
   },
   plugins: [
-    new UXWebpackPlugin(),
+    new UXWebpackPlugin({
+      datadogConfig: {
+        apiKey: ''/* SOME DATADOG API KEY FROM https://<YOUR_ORG>.datadoghq.com/account/settings#api */,
+      },
+    }),
   ],
 
 };

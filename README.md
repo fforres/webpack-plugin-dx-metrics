@@ -5,8 +5,7 @@
 
 [![Github test badge](https://github.com/fforres/webpack-plugin-dx-metrics/workflows/test/badge.svg)](https://github.com/fforres/webpack-plugin-dx-metrics/actions?query=workflow%3Atest) [![npm version](https://badge.fury.io/js/%40fforres%2Fwebpack-plugin-dx.svg)](https://www.npmjs.com/package/@fforres/webpack-plugin-dx)
 
-This webpack plugin serves as a way to quickly gather meaningful information on a webpack project's usage and sending it to a statsd server written in typescript.
-(For demo purposes, we are integrating with Datadog's [hot-shot](https://github.com/brightcove/hot-shots)).
+This webpack plugin is written in typescript, and serves as a way to quickly gather meaningful information on a webpack project's usage and sending it to datadog via [datadog-metrics](https://github.com/dbader/node-datadog-metrics).
 
 Attaches itself to webpack hooks, and using a series of timers, calculates and reports on things like compilation or recompilation time.
 

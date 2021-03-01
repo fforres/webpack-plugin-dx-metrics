@@ -1,4 +1,4 @@
-import { ClientOptions } from 'hot-shots';
+import { BufferedMetricsLoggerOptions } from 'datadog-metrics';
 
 export type Full<T> = {
   [P in keyof T]-?: T[P];
@@ -14,9 +14,10 @@ export const TrackingMetrics = {
 export type TrackingMetricKeys = keyof typeof TrackingMetrics;
 
 export type DXWebpackPluginProps = {
-  datadogConfig: ClientOptions
-  enabledKeysToTrack: TrackingMetricKeys[]
-  dryRun: boolean
+  datadogConfig?: BufferedMetricsLoggerOptions
+  enabledKeysToTrack?: TrackingMetricKeys[]
+  projectName: string;
+  dryRun?: boolean
 }
 
 export const trackingMetricKeys = Object.keys(TrackingMetrics) as TrackingMetricKeys[];

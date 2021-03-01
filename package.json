@@ -7,12 +7,15 @@
   "private": false,
   "scripts": {
     "build": "yarn tsc",
-    "dev": "yarn build & DEBUG=ux:webpack_plugin webpack-dev-server --config ./webpack.config.dev.js",
-    "debug": "yarn build && DEBUG=ux:webpack_plugin node --inspect-brk ./node_modules/webpack-dev-server/bin/webpack-dev-server.js --config ./webpack.config.dev.js",
+    "run:dev": "DEBUG=ux:webpack_plugin webpack-dev-server --config ./webpack.config.dev.js",
+    "run:debug": "DEBUG=ux:webpack_plugin node --inspect-brk ./node_modules/webpack-dev-server/bin/webpack-dev-server.js --config ./webpack.config.dev.js",
+    "dev": "yarn build && yarn run:dev",
+    "debug": "yarn build && yarn run:debug",
     "lint": "eslint --ext=.ts,.tsx src",
     "typecheck": "yarn tsc --noEmit"
   },
   "devDependencies": {
+    "@types/datadog-metrics": "^0.6.0",
     "@types/debug": "^4.1.5",
     "@types/uuid": "^8.3.0",
     "@types/webpack": "^4.41.26",
@@ -26,9 +29,9 @@
   },
   "dependencies": {
     "@types/deepmerge": "^2.2.0",
+    "datadog-metrics": "^0.9.1",
     "debug": "^4.3.1",
     "deepmerge": "^4.2.2",
-    "hot-shots": "^8.3.0",
     "typescript": "^4.1.3",
     "uuid": "^8.3.2",
     "webpack": "^4.40.0",
