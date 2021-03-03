@@ -1,4 +1,10 @@
 import { hrtime } from 'process';
+import debugFactory from 'debug';
+import {
+  DEBUG_STRING,
+} from './constants';
+
+const debug = debugFactory(`${DEBUG_STRING}:timer`);
 
 const diffingBigIntsToMilliseconds = (bigInt1: bigint, bigInt2: bigint) => {
   const substracted = (bigInt1 - bigInt2);
@@ -23,17 +29,20 @@ export class Timer {
   }
 
   start() {
+    debug('starting timer - "%s"', this.props.label);
     this.startTime = hrtime.bigint();
     this.started = true;
     this.isRunning = true;
   }
 
   stop() {
+    debug('stopping timer - "%s"', this.props.label);
     this.stopTime = hrtime.bigint();
     this.isRunning = false;
   }
 
   clear() {
+    debug('clearing timer - "%s"', this.props.label);
     this.startTime = BigInt(0);
     this.stopTime = BigInt(0);
     this.isRunning = false;
@@ -45,8 +54,12 @@ export class Timer {
       throw new Error(`Timer "${this.props.label}" was never started`);
     }
     if (this.isRunning) {
-      return diffingBigIntsToMilliseconds(hrtime.bigint(), this.startTime);
+      const milliseconds = diffingBigIntsToMilliseconds(hrtime.bigint(), this.startTime);
+      debug('TIME (in miliseconds) for "%s" => "%d miliseconds"', this.props.label, milliseconds);
+      return milliseconds;
     }
-    return diffingBigIntsToMilliseconds(this.stopTime, this.startTime);
+    const milliseconds = diffingBigIntsToMilliseconds(this.stopTime, this.startTime);
+    debug('TIME (in miliseconds) for "%s" => "%d miliseconds"', this.props.label, milliseconds);
+    return milliseconds;
   }
 }

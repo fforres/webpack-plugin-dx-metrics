@@ -1,4 +1,5 @@
 import { BufferedMetricsLoggerOptions } from 'datadog-metrics';
+import webpack from 'webpack';
 
 export type Full<T> = {
   [P in keyof T]-?: T[P];
@@ -21,3 +22,7 @@ export type DXWebpackPluginProps = {
 }
 
 export const trackingMetricKeys = Object.keys(TrackingMetrics) as TrackingMetricKeys[];
+
+export type UXPluginExtendedCompilation = webpack.compilation.Compilation & {
+  __id?: string;
+}

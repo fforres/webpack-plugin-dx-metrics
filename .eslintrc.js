@@ -18,6 +18,7 @@ module.exports = {
     'max-classes-per-file': ['off'],
     'class-methods-use-this': ['off'],
     'import/prefer-default-export': ['off'],
+    'no-underscore-dangle': ['off'],
     'import/extensions': [
       'error',
       'ignorePackages',
