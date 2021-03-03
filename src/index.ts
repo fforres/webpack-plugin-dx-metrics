@@ -78,7 +78,7 @@ class DXWebpackPlugin {
 
   private extendTags = (tags: any[] = []) => [
     `sessionId:${this.sessionId}`,
-    this.tagsArray,
+    ...this.tagsArray,
     ...tags,
   ];
 

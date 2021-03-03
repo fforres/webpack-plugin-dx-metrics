@@ -28,7 +28,15 @@ module.exports = {
         tsx: 'never',
       },
     ],
-    'prettier/prettier': ['error', { singleQuote: true }],
+    'prettier/prettier': [
+      'error',
+      {
+        semi: true,
+        trailingComma: 'all',
+        singleQuote: true,
+        tabWidth: 2,
+      },
+    ],
   },
   settings: {
     'import/resolver': {
