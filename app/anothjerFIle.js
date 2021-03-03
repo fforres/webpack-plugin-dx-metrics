@@ -1,2 +1,2 @@
 /* eslint-disable no-console */
-console.log('aTexqwe t');
+console.log('aText');

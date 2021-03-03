@@ -1,51 +1,28 @@
+/* eslint-disable no-param-reassign */
 import { Compiler } from 'webpack';
 import debugFactory from 'debug';
 import { v4 } from 'uuid';
 import deepmerge from 'deepmerge';
 import datadogMetrics from 'datadog-metrics';
-import { Timer } from './timer';
 import {
   DXWebpackPluginProps,
-  TrackingMetrics,
   TrackingMetricKeys,
   trackingMetricKeys,
+  UXPluginExtendedCompilation,
 } from './types';
 import {
   DEBUG_STRING,
   PLUGIN_NAME,
 } from './constants';
+import {
+  createTimer, createSingleTimer, getTimerMilliseconds, getSingleTimerMilliseconds,
+} from './timers';
 
-const sessionId = v4();
 const debug = debugFactory(DEBUG_STRING);
 
-const timersCache = {
-  [TrackingMetrics.recompile]: new Timer(TrackingMetrics.recompile),
-  [TrackingMetrics.recompile_session]: new Timer(TrackingMetrics.recompile_session),
-  [TrackingMetrics.compile]: new Timer(TrackingMetrics.compile),
-  [TrackingMetrics.compile_session]: new Timer(TrackingMetrics.compile_session),
-};
-
-const timer = {
-  start: (timerName: TrackingMetricKeys) => {
-    debug('starting "%s" timer', timerName);
-    timersCache[timerName].start();
-  },
-  stop: (timerName: TrackingMetricKeys) => {
-    debug('stopping "%s" timer', timerName);
-    timersCache[timerName].stop();
-  },
-  clear: (timerName: TrackingMetricKeys) => {
-    debug('clearing "%s" timer', timerName);
-    timersCache[timerName].clear();
-  },
-  getTime: (timerName: TrackingMetricKeys) => {
-    const milliseconds = timersCache[timerName].milliseconds();
-    debug('TIME (in miliseconds) for "%s" => "%d miliseconds"', timerName, milliseconds);
-    return milliseconds;
-  },
-};
-
 class DXWebpackPlugin {
+  private sessionId = v4();
+
   private options: Required<DXWebpackPluginProps> | null = null;
 
   private statsDClient = datadogMetrics
@@ -89,6 +66,8 @@ class DXWebpackPlugin {
     this.isRecompilation = true;
   }
 
+  private extendTags = (tags: any[] = []) => [...tags, `sessionId:${this.sessionId}`]
+
   private shouldTrack = (key: TrackingMetricKeys, value: number) => {
     if (!this.trackingEnabled) {
       debug('Tracking disabled, will not track %s', key);
@@ -102,62 +81,127 @@ class DXWebpackPlugin {
     return true;
   }
 
-  private trackHistogram = (key: TrackingMetricKeys, value: number) => {
+  private trackHistogram = (
+    key: TrackingMetricKeys,
+    value: number,
+    tags?: string[],
+    timestamp?: number,
+  ) => {
     if (this.shouldTrack(key, value)) {
-      this.statsDClient.histogram(key, value);
+      this.statsDClient.histogram(key, value, this.extendTags(tags), timestamp);
     }
   }
 
-  private trackIncrement = (key: TrackingMetricKeys, value: number = 1) => {
+  private trackGauge = (
+    key: TrackingMetricKeys,
+    value: number,
+    tags?: string[],
+    timestamp?: number,
+  ) => {
     if (this.shouldTrack(key, value)) {
-      this.statsDClient.increment(key, value);
+      this.statsDClient.gauge(key, value, this.extendTags(tags), timestamp);
+    }
+  }
+
+  private trackIncrement = (
+    key: TrackingMetricKeys,
+    value: number = 1,
+    tags?: string[],
+    timestamp?: number,
+  ) => {
+    if (this.shouldTrack(key, value)) {
+      this.statsDClient.increment(key, value, this.extendTags(tags), timestamp);
     }
   }
 
   private apply(compiler: Compiler) {
-    debug('Starting %s session. ID: "%s"', PLUGIN_NAME, sessionId);
-
+    debug('Starting %s session. ID: "%s"', PLUGIN_NAME, this.sessionId);
     compiler.hooks.environment.tap(PLUGIN_NAME, () => {
-      timer.start(TrackingMetrics.compile_session);
-      this.trackIncrement(TrackingMetrics.compile_session);
+      createSingleTimer('compile_session');
+      this.trackIncrement('compile_session');
     });
 
     compiler.hooks.watchRun.tap(PLUGIN_NAME, () => {
       if (this.isRecompilation) {
-        timer.start(TrackingMetrics.recompile_session);
-        this.trackIncrement(TrackingMetrics.recompile_session);
+        createSingleTimer('recompile_session');
+        this.trackIncrement('recompile_session');
       }
     });
 
-    compiler.hooks.beforeCompile.tap(PLUGIN_NAME, () => {
-      if (this.isRecompilation) {
-        timer.start(TrackingMetrics.recompile);
-      } else {
-        timer.start(TrackingMetrics.compile);
-      }
-    });
+    compiler.hooks.beforeCompile.tapAsync(
+      PLUGIN_NAME,
+      (
+        compilationParams: any,
+        callback,
+      ) => {
+      // Figure out (in here? maybe?) what type of compilation was this. CSS/JS/ESM/SVG/ETC
+        if (this.isRecompilation) {
+          const recompilationId = createTimer('recompile');
+          compilationParams.__id = recompilationId;
+        } else {
+          const compilationId = createTimer('compile');
+          compilationParams.__id = compilationId;
+        }
+        callback();
+      },
+    );
 
-    compiler.hooks.afterCompile.tap(PLUGIN_NAME, () => {
+    compiler.hooks.compilation.tap(
+      PLUGIN_NAME,
+      (
+        compilation: UXPluginExtendedCompilation,
+        compilationParams: any,
+      ) => {
+        /** This steps is here ATM to map the ID generated on the "beforeCompile"
+          * step, into the final "Compilation" object. This will allows us to
+          * match a "beforeCompile" hook with its corresponding "afterCompile" one.
+          */
+        if (this.isRecompilation) {
+          compilation.__id = compilationParams.__id;
+        } else {
+          compilation.__id = compilationParams.__id;
+        }
+      },
+    );
+
+    compiler.hooks.afterCompile.tap(PLUGIN_NAME, (compilation: UXPluginExtendedCompilation) => {
+      // Figure out (in here? maybe?) what type of compilation was this. CSS/JS/ESM/SVG/ETC
+      if (!compilation.__id) {
+        debug('no compilation id present');
+        return;
+      }
+      const time = getTimerMilliseconds(compilation.__id);
+      if (!time) {
+        debug('timer %s didn\'t return any milliseconds', compilation.__id);
+        return;
+      }
       if (this.isRecompilation) {
-        const time = timer.getTime(TrackingMetrics.recompile);
-        this.trackHistogram(TrackingMetrics.recompile, time);
-        timer.clear(TrackingMetrics.recompile);
+        this.trackHistogram('recompile', time);
+        this.trackGauge('recompile', time);
       } else {
-        const time = timer.getTime(TrackingMetrics.compile);
-        this.trackHistogram(TrackingMetrics.compile, time);
-        timer.clear(TrackingMetrics.compile);
+        this.trackHistogram('compile', time);
+        this.trackGauge('compile', time);
       }
     });
 
     compiler.hooks.done.tap(PLUGIN_NAME, () => {
+      debug('done');
       if (this.isRecompilation) {
-        const time = timer.getTime(TrackingMetrics.recompile_session);
-        this.trackHistogram(TrackingMetrics.recompile_session, time);
-        timer.clear(TrackingMetrics.recompile_session);
+        const time = getSingleTimerMilliseconds('recompile_session');
+        if (!time) {
+          debug('timer %s didn\'t return any milliseconds', 'recompile_session');
+          return;
+        }
+        this.trackHistogram('recompile_session', time);
+        this.trackGauge('recompile_session', time);
       } else {
-        const time = timer.getTime(TrackingMetrics.compile_session);
-        this.trackHistogram(TrackingMetrics.compile_session, time);
-        timer.clear(TrackingMetrics.compile_session);
+        const time = getSingleTimerMilliseconds('compile_session');
+        if (!time) {
+          debug('timer %s didn\'t return any milliseconds', 'compile_session');
+          return;
+        }
+        this.trackHistogram('compile_session', time);
+        this.trackGauge('compile_session', time);
         // Once we reach "done" for the first time, we can mark the end of
         // initial compilation, everyting after this, can be considered a
         // re-compilation, so we switch the flag

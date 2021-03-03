@@ -18,9 +18,26 @@ module.exports = {
     filename: fileName,
     publicPath: '/',
   },
-  watch: true,
-  watchOptions: {
-    ignored: '/node_modules/',
+  // watch: true,
+  // watchOptions: {
+  //   ignored: '/node_modules/',
+  // },
+  devServer: {
+    publicPath: '/',
+    hot: true,
+    historyApiFallback: {
+      index: '/',
+    },
+    onListening: (server) => {
+      // const port = server.listeningApp.address().port;
+      // const { localUrlForBrowser } = prepareUrls(
+      //   protocol,
+      //   HOST,
+      //   port || DEFAULT_PORT,
+      // );
+      // openBrowser(localUrlForBrowser);
+    },
+
   },
   resolve: {
     extensions: ['.js', '.jsx'],
