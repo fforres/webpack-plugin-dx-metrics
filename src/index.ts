@@ -10,12 +10,12 @@ import {
   trackingMetricKeys,
   UXPluginExtendedCompilation,
 } from './types';
+import { DEBUG_STRING, PLUGIN_NAME } from './constants';
 import {
-  DEBUG_STRING,
-  PLUGIN_NAME,
-} from './constants';
-import {
-  createTimer, createSingleTimer, getTimerMilliseconds, getSingleTimerMilliseconds,
+  createTimer,
+  createSingleTimer,
+  getTimerMilliseconds,
+  getSingleTimerMilliseconds,
 } from './timers';
 
 const debug = debugFactory(DEBUG_STRING);
@@ -23,52 +23,70 @@ const debug = debugFactory(DEBUG_STRING);
 class DXWebpackPlugin {
   private sessionId = v4();
 
-  private options: Required<DXWebpackPluginProps> | null = null;
+  private options: Required<DXWebpackPluginProps>;
 
-  private statsDClient = datadogMetrics
+  private datadogClient = datadogMetrics;
 
   private defaultOptions: Partial<DXWebpackPluginProps> = {
     enabledKeysToTrack: trackingMetricKeys,
     dryRun: false,
+    tags: {},
     datadogConfig: {
       prefix: 'ux.webpack.',
       flushIntervalSeconds: 2,
     },
   };
 
-  private isRecompilation: boolean = false
+  private isRecompilation: boolean = false;
 
-  private trackingEnabled: boolean = true
+  private trackingEnabled: boolean = true;
 
-  private enabledKeysSet: Set<TrackingMetricKeys> = new Set()
+  private enabledKeysSet: Set<TrackingMetricKeys> = new Set();
+
+  private tagsArray: string[] = [];
 
   private constructor(options: DXWebpackPluginProps) {
-    this.options = deepmerge<Required<DXWebpackPluginProps>>(this.defaultOptions, options);
+    this.options = deepmerge<Required<DXWebpackPluginProps>>(
+      this.defaultOptions,
+      options,
+    );
     this.trackingEnabled = !this.options.dryRun;
     this.enabledKeysSet = new Set(this.options.enabledKeysToTrack);
+    this.tagsArray = Object.entries(this.options.tags).map((tag) =>
+      tag.join(':'),
+    );
     this.preflightCheck();
   }
 
   private preflightCheck = () => {
     if (!this.options) {
+      // eslint-disable-next-line no-console
+      console.error('DXWebpackPlugin Preflight Check was not successful ❌');
       throw new Error('Options not initialized');
     }
-    if (!this.statsDClient) {
-      throw new Error('StatsD Client not initialized');
-    }
     debug('Options: %O', this.options);
-    this.statsDClient.init(this.options.datadogConfig);
+    this.datadogClient.init(this.options.datadogConfig);
     // eslint-disable-next-line no-console
-    console.info('Preflight check successful ✅. Ready to Start');
-  }
+    console.info(
+      'DXWebpackPlugin Preflight Check successful ✅. Ready to Start',
+    );
+  };
 
   private finishInitialCompilation = () => {
     this.isRecompilation = true;
-  }
+  };
 
-  private extendTags = (tags: any[] = []) => [...tags, `sessionId:${this.sessionId}`]
+  private extendTags = (tags: any[] = []) => [
+    `sessionId:${this.sessionId}`,
+    this.tagsArray,
+    ...tags,
+  ];
 
-  private shouldTrack = (key: TrackingMetricKeys, value: number) => {
+  private shouldTrack = (
+    key: TrackingMetricKeys,
+    value: number,
+    typeOfTracking: 'histogram' | 'gauge' | 'increment',
+  ) => {
     if (!this.trackingEnabled) {
       debug('Tracking disabled, will not track %s', key);
       return false;
@@ -77,9 +95,9 @@ class DXWebpackPlugin {
       debug('Tracking key is not allowed, will not track %s', key);
       return false;
     }
-    debug('Tracking  %s with value %s', key, value);
+    debug('Tracking "%s" as "%s". With value %s', key, typeOfTracking, value);
     return true;
-  }
+  };
 
   private trackHistogram = (
     key: TrackingMetricKeys,
@@ -87,10 +105,15 @@ class DXWebpackPlugin {
     tags?: string[],
     timestamp?: number,
   ) => {
-    if (this.shouldTrack(key, value)) {
-      this.statsDClient.histogram(key, value, this.extendTags(tags), timestamp);
+    if (this.shouldTrack(key, value, 'histogram')) {
+      this.datadogClient.histogram(
+        key,
+        value,
+        this.extendTags(tags),
+        timestamp,
+      );
     }
-  }
+  };
 
   private trackGauge = (
     key: TrackingMetricKeys,
@@ -98,10 +121,10 @@ class DXWebpackPlugin {
     tags?: string[],
     timestamp?: number,
   ) => {
-    if (this.shouldTrack(key, value)) {
-      this.statsDClient.gauge(key, value, this.extendTags(tags), timestamp);
+    if (this.shouldTrack(key, value, 'gauge')) {
+      this.datadogClient.gauge(key, value, this.extendTags(tags), timestamp);
     }
-  }
+  };
 
   private trackIncrement = (
     key: TrackingMetricKeys,
@@ -109,10 +132,15 @@ class DXWebpackPlugin {
     tags?: string[],
     timestamp?: number,
   ) => {
-    if (this.shouldTrack(key, value)) {
-      this.statsDClient.increment(key, value, this.extendTags(tags), timestamp);
+    if (this.shouldTrack(key, value, 'increment')) {
+      this.datadogClient.increment(
+        key,
+        value,
+        this.extendTags(tags),
+        timestamp,
+      );
     }
-  }
+  };
 
   private apply(compiler: Compiler) {
     debug('Starting %s session. ID: "%s"', PLUGIN_NAME, this.sessionId);
@@ -130,11 +158,8 @@ class DXWebpackPlugin {
 
     compiler.hooks.beforeCompile.tapAsync(
       PLUGIN_NAME,
-      (
-        compilationParams: any,
-        callback,
-      ) => {
-      // Figure out (in here? maybe?) what type of compilation was this. CSS/JS/ESM/SVG/ETC
+      (compilationParams: any, callback) => {
+        // Figure out (in here? maybe?) what type of compilation was this. CSS/JS/ESM/SVG/ETC
         if (this.isRecompilation) {
           const recompilationId = createTimer('recompile');
           compilationParams.__id = recompilationId;
@@ -148,14 +173,11 @@ class DXWebpackPlugin {
 
     compiler.hooks.compilation.tap(
       PLUGIN_NAME,
-      (
-        compilation: UXPluginExtendedCompilation,
-        compilationParams: any,
-      ) => {
+      (compilation: UXPluginExtendedCompilation, compilationParams: any) => {
         /** This steps is here ATM to map the ID generated on the "beforeCompile"
-          * step, into the final "Compilation" object. This will allows us to
-          * match a "beforeCompile" hook with its corresponding "afterCompile" one.
-          */
+         * step, into the final "Compilation" object. This will allows us to
+         * match a "beforeCompile" hook with its corresponding "afterCompile" one.
+         */
         if (this.isRecompilation) {
           compilation.__id = compilationParams.__id;
         } else {
@@ -164,32 +186,35 @@ class DXWebpackPlugin {
       },
     );
 
-    compiler.hooks.afterCompile.tap(PLUGIN_NAME, (compilation: UXPluginExtendedCompilation) => {
-      // Figure out (in here? maybe?) what type of compilation was this. CSS/JS/ESM/SVG/ETC
-      if (!compilation.__id) {
-        debug('no compilation id present');
-        return;
-      }
-      const time = getTimerMilliseconds(compilation.__id);
-      if (!time) {
-        debug('timer %s didn\'t return any milliseconds', compilation.__id);
-        return;
-      }
-      if (this.isRecompilation) {
-        this.trackHistogram('recompile', time);
-        this.trackGauge('recompile', time);
-      } else {
-        this.trackHistogram('compile', time);
-        this.trackGauge('compile', time);
-      }
-    });
+    compiler.hooks.afterCompile.tap(
+      PLUGIN_NAME,
+      (compilation: UXPluginExtendedCompilation) => {
+        // Figure out (in here? maybe?) what type of compilation was this. CSS/JS/ESM/SVG/ETC
+        if (!compilation.__id) {
+          debug('no compilation id present');
+          return;
+        }
+        const time = getTimerMilliseconds(compilation.__id);
+        if (!time) {
+          debug("timer %s didn't return any milliseconds", compilation.__id);
+          return;
+        }
+        if (this.isRecompilation) {
+          this.trackHistogram('recompile', time);
+          this.trackGauge('recompile', time);
+        } else {
+          this.trackHistogram('compile', time);
+          this.trackGauge('compile', time);
+        }
+      },
+    );
 
     compiler.hooks.done.tap(PLUGIN_NAME, () => {
       debug('done');
       if (this.isRecompilation) {
         const time = getSingleTimerMilliseconds('recompile_session');
         if (!time) {
-          debug('timer %s didn\'t return any milliseconds', 'recompile_session');
+          debug("timer %s didn't return any milliseconds", 'recompile_session');
           return;
         }
         this.trackHistogram('recompile_session', time);
@@ -197,7 +222,7 @@ class DXWebpackPlugin {
       } else {
         const time = getSingleTimerMilliseconds('compile_session');
         if (!time) {
-          debug('timer %s didn\'t return any milliseconds', 'compile_session');
+          debug("timer %s didn't return any milliseconds", 'compile_session');
           return;
         }
         this.trackHistogram('compile_session', time);
@@ -211,4 +236,4 @@ class DXWebpackPlugin {
   }
 }
 
-export = DXWebpackPlugin
+export = DXWebpackPlugin;

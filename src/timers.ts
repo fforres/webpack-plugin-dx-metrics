@@ -2,25 +2,14 @@ import debugFactory from 'debug';
 import { v4 } from 'uuid';
 import { Timer } from './timer';
 import { DEBUG_STRING } from './constants';
-import { TrackingMetrics } from './types';
 
 const debug = debugFactory(`${DEBUG_STRING}:timers`);
 
 const timersMap = new Map<string, Timer>();
 
-const multiplerTimersIdCache = {
-  [TrackingMetrics.recompile]: new Set<string>(),
-  [TrackingMetrics.compile]: new Set<string>(),
-};
-
-const singleTimersIdCache = {
-  [TrackingMetrics.recompile_session]: null as string | null,
-  [TrackingMetrics.compile_session]: null as string | null,
-};
-
 const createAndAssignTimer = (id: string) => {
   if (timersMap.has(id)) {
-    debug('There\'s already a timer for id %s', id);
+    debug("There's already a timer for id %s", id);
   }
   const timer = new Timer(id);
   timer.start();
@@ -29,24 +18,29 @@ const createAndAssignTimer = (id: string) => {
 
 export const createTimer = (trackingMetric: 'recompile' | 'compile') => {
   const key = v4();
-  createAndAssignTimer(`${trackingMetric} - ${key}`);
-  multiplerTimersIdCache[trackingMetric].add(key);
-  return key;
+  const id = `${trackingMetric}:${key}`;
+  createAndAssignTimer(id);
+  return id;
 };
 
-export const createSingleTimer = (trackingMetric: 'recompile_session' | 'compile_session') => {
-  const key = v4();
+export const createSingleTimer = (
+  trackingMetric: 'recompile_session' | 'compile_session',
+) => {
   createAndAssignTimer(trackingMetric);
-  singleTimersIdCache[trackingMetric] = key;
-  return key;
+  return trackingMetric;
 };
 
 export const getTimerMilliseconds = (key: string) => {
   const timer = timersMap.get(key);
   if (!timer) {
+    debug('ERROR: Could not find timer for key %s', key);
     return null;
   }
-  return timer.milliseconds();
+  const time = timer.milliseconds();
+  timersMap.delete(key);
+  return time;
 };
 
-export const getSingleTimerMilliseconds = (key: 'recompile_session' | 'compile_session') => getTimerMilliseconds(key);
+export const getSingleTimerMilliseconds = (
+  key: 'recompile_session' | 'compile_session',
+) => getTimerMilliseconds(key);
