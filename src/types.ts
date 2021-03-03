@@ -3,7 +3,7 @@ import webpack from 'webpack';
 
 export type Full<T> = {
   [P in keyof T]-?: T[P];
-}
+};
 
 export const TrackingMetrics = {
   recompile: 'recompile',
@@ -15,14 +15,17 @@ export const TrackingMetrics = {
 export type TrackingMetricKeys = keyof typeof TrackingMetrics;
 
 export type DXWebpackPluginProps = {
-  datadogConfig?: BufferedMetricsLoggerOptions
-  enabledKeysToTrack?: TrackingMetricKeys[]
+  datadogConfig?: BufferedMetricsLoggerOptions;
+  enabledKeysToTrack?: TrackingMetricKeys[];
+  tags: { [key: string]: string };
   projectName: string;
-  dryRun?: boolean
-}
+  dryRun?: boolean;
+};
 
-export const trackingMetricKeys = Object.keys(TrackingMetrics) as TrackingMetricKeys[];
+export const trackingMetricKeys = Object.keys(
+  TrackingMetrics,
+) as TrackingMetricKeys[];
 
 export type UXPluginExtendedCompilation = webpack.compilation.Compilation & {
   __id?: string;
-}
+};

@@ -13,6 +13,7 @@
     "debug": "yarn build && yarn run:debug",
     "watch": "yarn tsc --watch",
     "lint": "eslint --ext=.ts,.tsx src",
+    "lint:fix": "eslint '*/**/*.{js,ts,tsx}' --quiet --fix",
     "typecheck": "yarn tsc --noEmit"
   },
   "devDependencies": {
@@ -24,8 +25,11 @@
     "@typescript-eslint/parser": "^4.14.2",
     "eslint": "^7.19.0",
     "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-config-prettier": "^8.1.0",
     "eslint-import-resolver-typescript": "^2.3.0",
     "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-prettier": "^3.3.1",
+    "prettier": "^2.2.1",
     "ts-node": "^9.1.1"
   },
   "dependencies": {
