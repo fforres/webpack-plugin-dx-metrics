@@ -9,6 +9,10 @@ This webpack plugin is written in typescript, and serves as a way to quickly gat
 
 Attaches itself to webpack hooks, and using a series of timers, calculates and reports on things like compilation or recompilation time.
 
+## Example of a datadog dashboard
+![image](https://user-images.githubusercontent.com/952992/109847124-b1859580-7c03-11eb-806e-6a493fd87030.png)
+
+
 ## Install
 
 If your are using yarn
