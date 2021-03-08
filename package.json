@@ -1,6 +1,6 @@
 {
   "name": "@fforres/webpack-plugin-dx",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "main": "build/index.js",
   "author": "fforres",
   "license": "MIT",
