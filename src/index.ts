@@ -52,24 +52,40 @@ class DXWebpackPlugin {
     );
     this.trackingEnabled = !this.options.dryRun;
     this.enabledKeysSet = new Set(this.options.enabledKeysToTrack);
-    this.tagsArray = Object.entries(this.options.tags).map((tag) =>
-      tag.join(':'),
-    );
+    this.tagsArray = this.generateTags();
     this.preflightCheck();
   }
 
   private preflightCheck = () => {
-    if (!this.options) {
+    try {
+      if (!this.options) {
+        throw new Error('Options not initialized');
+      }
+      if (!this.options.projectName) {
+        throw new Error('No project name was defined');
+      }
+      debug('Options: %O', this.options);
+      this.datadogClient.init(this.options.datadogConfig);
+    } catch (e) {
       // eslint-disable-next-line no-console
       console.error('DXWebpackPlugin Preflight Check was not successful ❌');
-      throw new Error('Options not initialized');
+      // eslint-disable-next-line no-console
+      console.error(e);
     }
-    debug('Options: %O', this.options);
-    this.datadogClient.init(this.options.datadogConfig);
     // eslint-disable-next-line no-console
     console.info(
       'DXWebpackPlugin Preflight Check successful ✅. Ready to Start',
     );
+  };
+
+  private generateTags = (): string[] => {
+    const optionTags = Object.entries(this.options.tags).map((tag) =>
+      tag.join(':'),
+    );
+
+    const internalTags = [`projectName:${this.options.projectName}`];
+
+    return [...optionTags, ...internalTags];
   };
 
   private finishInitialCompilation = () => {

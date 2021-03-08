@@ -17,7 +17,7 @@ export type TrackingMetricKeys = keyof typeof TrackingMetrics;
 export type DXWebpackPluginProps = {
   datadogConfig?: BufferedMetricsLoggerOptions;
   enabledKeysToTrack?: TrackingMetricKeys[];
-  tags: { [key: string]: string };
+  tags?: { [key: string]: string };
   projectName: string;
   dryRun?: boolean;
 };

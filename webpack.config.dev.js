@@ -37,17 +37,17 @@ module.exports = {
       // );
       // openBrowser(localUrlForBrowser);
     },
-
   },
   resolve: {
     extensions: ['.js', '.jsx'],
   },
   plugins: [
     new UXWebpackPlugin({
+      projectName: '',
       datadogConfig: {
-        apiKey: ''/* SOME DATADOG API KEY FROM https://<YOUR_ORG>.datadoghq.com/account/settings#api */,
+        apiKey:
+          '' /* SOME DATADOG API KEY FROM https://<YOUR_ORG>.datadoghq.com/account/settings#api */,
       },
     }),
   ],
-
 };
