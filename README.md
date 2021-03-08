@@ -1,8 +1,10 @@
 # DX-analytics-webpack-plugin
 
-<img src="./logo/logo@2x.png" width="400px" style="max-width:100%;"></img>
 
 [![Github test badge](https://github.com/fforres/webpack-plugin-dx-metrics/workflows/test/badge.svg)](https://github.com/fforres/webpack-plugin-dx-metrics/actions?query=workflow%3Atest) [![npm version](https://badge.fury.io/js/%40fforres%2Fwebpack-plugin-dx.svg)](https://www.npmjs.com/package/@fforres/webpack-plugin-dx)
+
+<img src="./logo/logo@2x.png" width="400px" style="max-width:100%;"></img>
+
 
 This webpack plugin is written in typescript, and serves as a way to quickly gather meaningful information on a webpack project's usage and sending it to datadog via [datadog-metrics](https://github.com/dbader/node-datadog-metrics).
 
