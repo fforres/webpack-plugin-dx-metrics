@@ -27,5 +27,5 @@ export const trackingMetricKeys = Object.keys(
 ) as TrackingMetricKeys[];
 
 export type UXPluginExtendedCompilation = webpack.compilation.Compilation & {
-  __id?: string;
+  __id?: TrackingMetricKeys;
 };

@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 require('./anothjerFIle');
+require('./index.css');
 
 console.log('starting asdads');
 if (module.hot) {

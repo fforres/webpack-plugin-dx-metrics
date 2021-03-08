@@ -3,12 +3,6 @@ import debugFactory from 'debug';
 import { DEBUG_STRING } from './constants';
 
 const debug = debugFactory(`${DEBUG_STRING}:timer`);
-
-const diffingBigIntsToMilliseconds = (bigInt1: bigint, bigInt2: bigint) => {
-  const substracted = bigInt1 - bigInt2;
-  return Math.floor(Number(substracted / BigInt(1000000)));
-};
-
 export class Timer {
   props: { label: string } = {
     label: '',
@@ -25,6 +19,11 @@ export class Timer {
   constructor(label: string) {
     this.props = { label };
   }
+
+  private timeSinceStart = (bigInt1: bigint) => {
+    const substracted = bigInt1 - this.startTime;
+    return Math.floor(Number(substracted / BigInt(1000000)));
+  };
 
   start() {
     debug('Starting timer - "%s"', this.props.label);
@@ -52,17 +51,11 @@ export class Timer {
       throw new Error(`Timer "${this.props.label}" was never started`);
     }
     if (this.isRunning) {
-      const milliseconds = diffingBigIntsToMilliseconds(
-        hrtime.bigint(),
-        this.startTime,
-      );
+      const milliseconds = this.timeSinceStart(hrtime.bigint());
       debug('Time for "%s" => "%d ms"', this.props.label, milliseconds);
       return milliseconds;
     }
-    const milliseconds = diffingBigIntsToMilliseconds(
-      this.stopTime,
-      this.startTime,
-    );
+    const milliseconds = this.timeSinceStart(this.stopTime);
     debug('Time for "%s" => "%d ms"', this.props.label, milliseconds);
     return milliseconds;
   }
