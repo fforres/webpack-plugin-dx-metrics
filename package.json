@@ -1,6 +1,6 @@
 {
   "name": "@fforres/webpack-plugin-dx",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "main": "build/index.js",
   "author": "fforres",
   "license": "MIT",
@@ -17,12 +17,16 @@
     "typecheck": "yarn tsc --noEmit"
   },
   "devDependencies": {
+    "@babel/core": "^7.13.10",
+    "@babel/preset-env": "^7.13.10",
+    "@fforres/webpack-plugin-dx": "^0.0.8",
     "@types/datadog-metrics": "^0.6.0",
     "@types/debug": "^4.1.5",
     "@types/uuid": "^8.3.0",
     "@types/webpack": "^4.41.26",
     "@typescript-eslint/eslint-plugin": "^4.14.2",
     "@typescript-eslint/parser": "^4.14.2",
+    "babel-loader": "^8.2.2",
     "eslint": "^7.19.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-config-prettier": "^8.1.0",

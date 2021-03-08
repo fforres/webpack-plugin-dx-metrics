@@ -1,6 +1,6 @@
 import debugFactory from 'debug';
-import { v4 } from 'uuid';
 import { Timer } from './timer';
+import { TrackingMetricKeys } from './types';
 import { DEBUG_STRING } from './constants';
 
 const debug = debugFactory(`${DEBUG_STRING}:timers`);
@@ -16,31 +16,20 @@ const createAndAssignTimer = (id: string) => {
   timersMap.set(id, timer);
 };
 
-export const createTimer = (trackingMetric: 'recompile' | 'compile') => {
-  const key = v4();
-  const id = `${trackingMetric}:${key}`;
-  createAndAssignTimer(id);
-  return id;
-};
+export const timerExists = (id: string) => timersMap.has(id);
 
-export const createSingleTimer = (
-  trackingMetric: 'recompile_session' | 'compile_session',
-) => {
+export const createTimer = (trackingMetric: TrackingMetricKeys) => {
   createAndAssignTimer(trackingMetric);
   return trackingMetric;
 };
 
-export const getTimerMilliseconds = (key: string) => {
-  const timer = timersMap.get(key);
+export const getTimerMilliseconds = (trackingMetric: TrackingMetricKeys) => {
+  const timer = timersMap.get(trackingMetric);
   if (!timer) {
-    debug('ERROR: Could not find timer for key %s', key);
+    debug('ERROR: Could not find timer for key %s', trackingMetric);
     return null;
   }
   const time = timer.milliseconds();
-  timersMap.delete(key);
+  timersMap.delete(trackingMetric);
   return time;
 };
-
-export const getSingleTimerMilliseconds = (
-  key: 'recompile_session' | 'compile_session',
-) => getTimerMilliseconds(key);
