@@ -11,12 +11,7 @@ import {
   UXPluginExtendedCompilation,
 } from './types';
 import { DEBUG_STRING, PLUGIN_NAME } from './constants';
-import {
-  createTimer,
-  createSingleTimer,
-  getTimerMilliseconds,
-  getSingleTimerMilliseconds,
-} from './timers';
+import { timerExists, createTimer, getTimerMilliseconds } from './timers';
 
 const debug = debugFactory(DEBUG_STRING);
 
@@ -161,13 +156,13 @@ class DXWebpackPlugin {
   private apply(compiler: Compiler) {
     debug('Starting %s session. ID: "%s"', PLUGIN_NAME, this.sessionId);
     compiler.hooks.environment.tap(PLUGIN_NAME, () => {
-      createSingleTimer('compile_session');
+      createTimer('compile_session');
       this.trackIncrement('compile_session');
     });
 
     compiler.hooks.watchRun.tap(PLUGIN_NAME, () => {
       if (this.isRecompilation) {
-        createSingleTimer('recompile_session');
+        createTimer('recompile_session');
         this.trackIncrement('recompile_session');
       }
     });
@@ -175,13 +170,10 @@ class DXWebpackPlugin {
     compiler.hooks.beforeCompile.tapAsync(
       PLUGIN_NAME,
       (compilationParams: any, callback) => {
-        // Figure out (in here? maybe?) what type of compilation was this. CSS/JS/ESM/SVG/ETC
-        if (this.isRecompilation) {
-          const recompilationId = createTimer('recompile');
+        const id = this.isRecompilation ? 'recompile' : 'compile';
+        if (!timerExists(id)) {
+          const recompilationId = createTimer(id);
           compilationParams.__id = recompilationId;
-        } else {
-          const compilationId = createTimer('compile');
-          compilationParams.__id = compilationId;
         }
         callback();
       },
@@ -194,9 +186,7 @@ class DXWebpackPlugin {
          * step, into the final "Compilation" object. This will allows us to
          * match a "beforeCompile" hook with its corresponding "afterCompile" one.
          */
-        if (this.isRecompilation) {
-          compilation.__id = compilationParams.__id;
-        } else {
+        if (this.isRecompilation && compilationParams.__id) {
           compilation.__id = compilationParams.__id;
         }
       },
@@ -228,7 +218,7 @@ class DXWebpackPlugin {
     compiler.hooks.done.tap(PLUGIN_NAME, () => {
       debug('done');
       if (this.isRecompilation) {
-        const time = getSingleTimerMilliseconds('recompile_session');
+        const time = getTimerMilliseconds('recompile_session');
         if (!time) {
           debug("timer %s didn't return any milliseconds", 'recompile_session');
           return;
@@ -236,7 +226,7 @@ class DXWebpackPlugin {
         this.trackHistogram('recompile_session', time);
         this.trackGauge('recompile_session', time);
       } else {
-        const time = getSingleTimerMilliseconds('compile_session');
+        const time = getTimerMilliseconds('compile_session');
         if (!time) {
           debug("timer %s didn't return any milliseconds", 'compile_session');
           return;
