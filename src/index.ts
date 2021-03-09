@@ -10,7 +10,7 @@ import {
   trackingMetricKeys,
   UXPluginExtendedCompilation,
 } from './types';
-import { DEBUG_STRING, PLUGIN_NAME } from './constants';
+import { DEBUG_STRING, PLUGIN_NAME, PLUGIN_VERSION } from './constants';
 import { timerExists, createTimer, getTimerMilliseconds } from './timers';
 
 const debug = debugFactory(DEBUG_STRING);
@@ -38,7 +38,7 @@ class DXWebpackPlugin {
 
   private enabledKeysSet: Set<TrackingMetricKeys> = new Set();
 
-  private tagsArray: string[] = [];
+  private internallyDefinedTags: string[] = [];
 
   private constructor(options: DXWebpackPluginProps) {
     this.options = deepmerge<Required<DXWebpackPluginProps>>(
@@ -47,7 +47,8 @@ class DXWebpackPlugin {
     );
     this.trackingEnabled = !this.options.dryRun;
     this.enabledKeysSet = new Set(this.options.enabledKeysToTrack);
-    this.tagsArray = this.generateTags();
+    this.internallyDefinedTags = this.generateInternalTags();
+
     this.preflightCheck();
   }
 
@@ -73,12 +74,17 @@ class DXWebpackPlugin {
     );
   };
 
-  private generateTags = (): string[] => {
+  private generateInternalTags = (): string[] => {
     const optionTags = Object.entries(this.options.tags).map((tag) =>
       tag.join(':'),
     );
 
-    const internalTags = [`projectName:${this.options.projectName}`];
+    const internalTags = [
+      `projectName:${this.options.projectName}`,
+      `pluginVersion:${PLUGIN_VERSION}`,
+    ];
+
+    debug('internallyDefinedTags %o', internalTags);
 
     return [...optionTags, ...internalTags];
   };
@@ -89,7 +95,7 @@ class DXWebpackPlugin {
 
   private extendTags = (tags: any[] = []) => [
     `sessionId:${this.sessionId}`,
-    ...this.tagsArray,
+    ...this.internallyDefinedTags,
     ...tags,
   ];
 
