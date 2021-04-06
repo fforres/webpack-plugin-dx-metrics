@@ -29,7 +29,7 @@ jobs:
   publish:
     needs: [test]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
 
@@ -51,7 +51,7 @@ jobs:
         run: yarn build
 
       - name: Publish To Github Packages
-        run: yarn publish --access public --tag beta
+        run: yarn publish --access public --tag next --new-version=${GITHUB_RUN_NUMBER}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_ENV: production
