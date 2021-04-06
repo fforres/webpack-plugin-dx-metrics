@@ -51,7 +51,7 @@ jobs:
         run: yarn build
 
       - name: Publish To Github Packages
-        run: yarn publish --access public --tag next --new-version=0.0.${GITHUB_RUN_NUMBER}-next
+        run: yarn publish --access public --tag next --new-version=0.0.${GITHUB_RUN_NUMBER}-next --no-git-tag-version
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_ENV: production
