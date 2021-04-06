@@ -1,13 +1,11 @@
 name: test
 
 on:
-  push:
   pull_request:
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
 
