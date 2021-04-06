@@ -1,10 +1,10 @@
 /* eslint-disable no-param-reassign */
-import { Compiler } from 'webpack';
 import debugFactory from 'debug';
 import { v4 } from 'uuid';
 import deepmerge from 'deepmerge';
 import datadogMetrics from 'datadog-metrics';
 import {
+  Compiler,
   DXWebpackPluginProps,
   TrackingMetricKeys,
   trackingMetricKeys,

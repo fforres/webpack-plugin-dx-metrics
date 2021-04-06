@@ -63,6 +63,7 @@ module.exports = {
   plugins: [
     new UXWebpackPlugin({
       projectName: 'some-name',
+      dryRun: true,
       datadogConfig: {
         apiKey: 'some-key',
         /* SOME DATADOG API KEY FROM https://<YOUR_ORG>.datadoghq.com/account/settings#api */
