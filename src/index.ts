@@ -40,7 +40,7 @@ class DXWebpackPlugin {
 
   private internallyDefinedTags: string[] = [];
 
-  private constructor(options: DXWebpackPluginProps) {
+  constructor(options: DXWebpackPluginProps) {
     this.options = deepmerge<Required<DXWebpackPluginProps>>(
       this.defaultOptions,
       options,
