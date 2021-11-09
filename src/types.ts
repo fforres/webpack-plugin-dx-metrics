@@ -12,6 +12,9 @@ export const TrackingMetrics = {
   recompile_session: 'recompile_session',
   compile: 'compile',
   compile_session: 'compile_session',
+  process_memory: 'process_memory',
+  heap_used: 'heap_used',
+  heap_total: 'heap_total',
 } as const;
 
 export type TrackingMetricKeys = keyof typeof TrackingMetrics;
@@ -22,6 +25,10 @@ export type DXWebpackPluginProps = {
   tags?: { [key: string]: string };
   projectName: string;
   dryRun?: boolean;
+  memoryTracking?: {
+    enabled: boolean;
+    lapseTimeInMilliseconds: number;
+  };
 };
 
 export const trackingMetricKeys = Object.keys(
