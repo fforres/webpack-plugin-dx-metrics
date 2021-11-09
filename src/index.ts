@@ -30,6 +30,10 @@ class DXWebpackPlugin {
       prefix: PLUGIN_PREFIX,
       flushIntervalSeconds: 2,
     },
+    memoryTracking: {
+      enabled: true,
+      lapseTimeInMilliseconds: 2000,
+    },
   };
 
   private isRecompilation: boolean = false;
