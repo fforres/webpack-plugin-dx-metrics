@@ -6,12 +6,12 @@ import datadogMetrics from 'datadog-metrics';
 import {
   Compiler,
   DXWebpackPluginProps,
-  TrackingMetricKeys,
   trackingMetricKeys,
   UXPluginExtendedCompilation,
 } from './types';
-import { DEBUG_STRING, PLUGIN_NAME, PLUGIN_VERSION } from './constants';
+import { DEBUG_STRING, PLUGIN_NAME, PLUGIN_PREFIX } from './constants';
 import { timerExists, createTimer, getTimerMilliseconds } from './timers';
+import { Tracker } from './tracker';
 
 const debug = debugFactory(DEBUG_STRING);
 
@@ -27,30 +27,41 @@ class DXWebpackPlugin {
     dryRun: false,
     tags: {},
     datadogConfig: {
-      prefix: 'ux.webpack.',
+      prefix: PLUGIN_PREFIX,
       flushIntervalSeconds: 2,
     },
   };
 
   private isRecompilation: boolean = false;
 
-  private trackingEnabled: boolean = true;
+  private memoryTrackingInterval: ReturnType<typeof setInterval> | null = null;
 
-  private enabledKeysSet: Set<TrackingMetricKeys> = new Set();
-
-  private internallyDefinedTags: string[] = [];
+  private tracker: Tracker;
 
   constructor(options: DXWebpackPluginProps) {
     this.options = deepmerge<Required<DXWebpackPluginProps>>(
       this.defaultOptions,
       options,
     );
-    this.trackingEnabled = !this.options.dryRun;
-    this.enabledKeysSet = new Set(this.options.enabledKeysToTrack);
-    this.internallyDefinedTags = this.generateInternalTags();
-
+    this.tracker = new Tracker(this.options, this.sessionId);
     this.preflightCheck();
   }
+
+  private trackMemoryUsage = () => {
+    const { rss, heapUsed, heapTotal } = process.memoryUsage();
+    this.tracker.trackAll('process_memory', rss / 1024);
+    this.tracker.trackAll('heap_total', heapTotal / 1024);
+    this.tracker.trackAll('heap_used', heapUsed / 1024);
+  };
+
+  private initializeMemoryUsageTracking = () => {
+    if (this.options.memoryTracking.enabled) {
+      this.memoryTrackingInterval = setInterval(
+        this.trackMemoryUsage,
+        this.options.memoryTracking.lapseTimeInMilliseconds,
+      );
+    }
+  };
 
   private preflightCheck = () => {
     try {
@@ -61,7 +72,7 @@ class DXWebpackPlugin {
         throw new Error('No project name was defined');
       }
       debug('Options: %O', this.options);
-      this.datadogClient.init(this.options.datadogConfig);
+      this.initializeMemoryUsageTracking();
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('DXWebpackPlugin Preflight Check was not successful ❌');
@@ -74,102 +85,21 @@ class DXWebpackPlugin {
     );
   };
 
-  private generateInternalTags = (): string[] => {
-    const optionTags = Object.entries(this.options.tags).map((tag) =>
-      tag.join(':'),
-    );
-
-    const internalTags = [
-      `projectName:${this.options.projectName}`,
-      `pluginVersion:${PLUGIN_VERSION}`,
-    ];
-
-    debug('internallyDefinedTags %o', internalTags);
-
-    return [...optionTags, ...internalTags];
-  };
-
   private finishInitialCompilation = () => {
     this.isRecompilation = true;
-  };
-
-  private extendTags = (tags: any[] = []) => [
-    `sessionId:${this.sessionId}`,
-    ...this.internallyDefinedTags,
-    ...tags,
-  ];
-
-  private shouldTrack = (
-    key: TrackingMetricKeys,
-    value: number,
-    typeOfTracking: 'histogram' | 'gauge' | 'increment',
-  ) => {
-    if (!this.trackingEnabled) {
-      debug('Tracking disabled, will not track %s', key);
-      return false;
-    }
-    if (!this.enabledKeysSet.has(key)) {
-      debug('Tracking key is not allowed, will not track %s', key);
-      return false;
-    }
-    debug('Tracking "%s" as "%s". With value %s', key, typeOfTracking, value);
-    return true;
-  };
-
-  private trackHistogram = (
-    key: TrackingMetricKeys,
-    value: number,
-    tags?: string[],
-    timestamp?: number,
-  ) => {
-    if (this.shouldTrack(key, value, 'histogram')) {
-      this.datadogClient.histogram(
-        key,
-        value,
-        this.extendTags(tags),
-        timestamp,
-      );
-    }
-  };
-
-  private trackGauge = (
-    key: TrackingMetricKeys,
-    value: number,
-    tags?: string[],
-    timestamp?: number,
-  ) => {
-    if (this.shouldTrack(key, value, 'gauge')) {
-      this.datadogClient.gauge(key, value, this.extendTags(tags), timestamp);
-    }
-  };
-
-  private trackIncrement = (
-    key: TrackingMetricKeys,
-    value: number = 1,
-    tags?: string[],
-    timestamp?: number,
-  ) => {
-    if (this.shouldTrack(key, value, 'increment')) {
-      this.datadogClient.increment(
-        key,
-        value,
-        this.extendTags(tags),
-        timestamp,
-      );
-    }
   };
 
   private apply(compiler: Compiler) {
     debug('Starting %s session. ID: "%s"', PLUGIN_NAME, this.sessionId);
     compiler.hooks.environment.tap(PLUGIN_NAME, () => {
       createTimer('compile_session');
-      this.trackIncrement('compile_session');
+      this.tracker.trackIncrement('compile_session');
     });
 
     compiler.hooks.watchRun.tap(PLUGIN_NAME, () => {
       if (this.isRecompilation) {
         createTimer('recompile_session');
-        this.trackIncrement('recompile_session');
+        this.tracker.trackIncrement('recompile_session');
       }
     });
 
@@ -212,11 +142,9 @@ class DXWebpackPlugin {
           return;
         }
         if (this.isRecompilation) {
-          this.trackHistogram('recompile', time);
-          this.trackGauge('recompile', time);
+          this.tracker.trackAll('recompile', time);
         } else {
-          this.trackHistogram('compile', time);
-          this.trackGauge('compile', time);
+          this.tracker.trackAll('compile', time);
         }
       },
     );
@@ -229,16 +157,14 @@ class DXWebpackPlugin {
           debug("timer %s didn't return any milliseconds", 'recompile_session');
           return;
         }
-        this.trackHistogram('recompile_session', time);
-        this.trackGauge('recompile_session', time);
+        this.tracker.trackAll('recompile_session', time);
       } else {
         const time = getTimerMilliseconds('compile_session');
         if (!time) {
           debug("timer %s didn't return any milliseconds", 'compile_session');
           return;
         }
-        this.trackHistogram('compile_session', time);
-        this.trackGauge('compile_session', time);
+        this.tracker.trackAll('compile_session', time);
         // Once we reach "done" for the first time, we can mark the end of
         // initial compilation, everyting after this, can be considered a
         // re-compilation, so we switch the flag
